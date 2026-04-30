@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 export default function App() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [hazardousOnly, setHazardousOnly] = useState(false)
 
   useEffect(() => {
     fetch("http://localhost:5001/api/neows/upcoming")
@@ -16,6 +18,22 @@ export default function App() {
         setLoading(false)
       })
   }, [])
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase()
+
+    return rows.filter((row) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        row.name?.toLowerCase().includes(normalizedSearch) ||
+        row.neo_reference_id?.toLowerCase().includes(normalizedSearch)
+
+      const matchesHazard =
+        !hazardousOnly || row.is_hazardous === true
+
+      return matchesSearch && matchesHazard
+    })
+  }, [rows, search, hazardousOnly])
 
   const stats = useMemo(() => {
     const hazardous = rows.filter((row) => row.is_hazardous)
@@ -69,11 +87,7 @@ export default function App() {
               marginBottom: "28px",
             }}
           >
-            <KpiCard
-              label="Tracked Objects"
-              value={stats.total}
-              subtext="Current NeoWs feed"
-            />
+            <KpiCard label="Tracked Objects" value={stats.total} subtext="Current NeoWs feed" />
 
             <KpiCard
               label="Potentially Hazardous"
@@ -102,10 +116,81 @@ export default function App() {
             />
           </section>
 
+          <section
+            style={{
+              border: "1px solid #24304a",
+              borderRadius: "14px",
+              padding: "16px",
+              background: "#0f172a",
+              marginBottom: "24px",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: "12px",
+                alignItems: "center",
+              }}
+            >
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search asteroid name or reference ID..."
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #334155",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  outline: "none",
+                }}
+              />
+
+              <button
+                onClick={() => setHazardousOnly((value) => !value)}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  border: hazardousOnly ? "1px solid #ef4444" : "1px solid #334155",
+                  background: hazardousOnly ? "#7f1d1d" : "#111827",
+                  color: "#e5e7eb",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {hazardousOnly ? "Hazardous Only: ON" : "Hazardous Only: OFF"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setSearch("")
+                  setHazardousOnly(false)
+                }}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #334155",
+                  background: "#111827",
+                  color: "#e5e7eb",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Reset
+              </button>
+            </div>
+
+            <div style={{ marginTop: "12px", color: "#94a3b8", fontSize: "14px" }}>
+              Showing {filteredRows.length} of {rows.length} objects
+            </div>
+          </section>
+
           <section>
             <h2 style={{ marginBottom: "14px" }}>Tracking Grid</h2>
 
-            {rows.slice(0, 20).map((row) => (
+            {filteredRows.slice(0, 20).map((row) => (
               <div
                 key={row.id}
                 style={{
@@ -113,20 +198,29 @@ export default function App() {
                   borderRadius: "10px",
                   padding: "12px",
                   marginBottom: "10px",
-                  background: "#121a2b",
+                  background: row.is_hazardous ? "#2a1218" : "#121a2b",
                 }}
               >
                 <strong>{row.name}</strong>
                 <div>Date: {row.close_approach_date}</div>
-                <div>
-                  Velocity: {row.relative_velocity_mph?.toLocaleString()} mph
-                </div>
-                <div>
-                  Miss Distance: {row.miss_distance_miles?.toLocaleString()} miles
-                </div>
+                <div>Velocity: {row.relative_velocity_mph?.toLocaleString()} mph</div>
+                <div>Miss Distance: {row.miss_distance_miles?.toLocaleString()} miles</div>
                 <div>Hazardous: {row.is_hazardous ? "Yes" : "No"}</div>
               </div>
             ))}
+
+            {filteredRows.length === 0 && (
+              <div
+                style={{
+                  border: "1px dashed #334155",
+                  borderRadius: "10px",
+                  padding: "20px",
+                  color: "#94a3b8",
+                }}
+              >
+                No objects match your current filters.
+              </div>
+            )}
           </section>
         </>
       )}

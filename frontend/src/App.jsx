@@ -182,17 +182,11 @@ export default function App() {
 
     const closest = [...neoEvents]
       .filter((neo) => neo.miss_distance_miles)
-      .sort(
-        (a, b) =>
-          Number(a.miss_distance_miles) - Number(b.miss_distance_miles)
-      )[0];
+      .sort((a, b) => Number(a.miss_distance_miles) - Number(b.miss_distance_miles))[0];
 
     const fastest = [...neoEvents]
       .filter((neo) => neo.relative_velocity_mph)
-      .sort(
-        (a, b) =>
-          Number(b.relative_velocity_mph) - Number(a.relative_velocity_mph)
-      )[0];
+      .sort((a, b) => Number(b.relative_velocity_mph) - Number(a.relative_velocity_mph))[0];
 
     return {
       total: neoEvents.length,

@@ -1,8 +1,7 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import requests
-from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import NeoEvent
@@ -12,110 +11,136 @@ NASA_API_KEY = os.getenv("NASA_API_KEY", "DEMO_KEY")
 NEOWS_FEED_URL = "https://api.nasa.gov/neo/rest/v1/feed"
 
 
-def parse_float(value):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def parse_datetime(value):
+def parse_close_approach_datetime(value):
     if not value:
         return None
 
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
+        return datetime.strptime(value, "%Y-%b-%d %H:%M")
+    except Exception:
         return None
 
 
-def fetch_neows_feed():
-    start_date = datetime.now(timezone.utc).date()
-    end_date = start_date + timedelta(days=7)
+def fetch_neows_data():
+    today = datetime.utcnow().date()
+    end_date = today + timedelta(days=7)
 
-    response = requests.get(
-        NEOWS_FEED_URL,
-        params={
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "api_key": NASA_API_KEY,
-        },
-        timeout=30,
-    )
+    params = {
+        "start_date": today.isoformat(),
+        "end_date": end_date.isoformat(),
+        "api_key": NASA_API_KEY,
+    }
 
+    response = requests.get(NEOWS_FEED_URL, params=params, timeout=30)
     response.raise_for_status()
     return response.json()
 
 
-def upsert_neo_event(db: Session, neo: dict, approach: dict, fetched_at: datetime):
-    neo_reference_id = neo.get("neo_reference_id")
-    close_approach_datetime_raw = approach.get("close_approach_date_full")
-    close_approach_datetime = parse_datetime(close_approach_datetime_raw)
+def upsert_neo_event(db, neo, approach):
+    close_approach_date = approach.get("close_approach_date")
+    close_approach_datetime = parse_close_approach_datetime(
+        approach.get("close_approach_date_full")
+    )
+
+    miss_distance_miles = approach.get("miss_distance", {}).get("miles")
+    relative_velocity_mph = approach.get("relative_velocity", {}).get(
+        "miles_per_hour"
+    )
 
     existing = (
         db.query(NeoEvent)
         .filter(
-            NeoEvent.neo_reference_id == neo_reference_id,
-            NeoEvent.close_approach_datetime == close_approach_datetime,
+            NeoEvent.neo_reference_id == neo.get("neo_reference_id"),
+            NeoEvent.close_approach_date == close_approach_date,
         )
         .first()
     )
 
-    diameter = neo.get("estimated_diameter", {}).get("feet", {})
-    velocity = approach.get("relative_velocity", {})
-    miss_distance = approach.get("miss_distance", {})
-
-    payload = {
-        "neo_reference_id": neo_reference_id,
-        "name": neo.get("name"),
-        "nasa_jpl_url": neo.get("nasa_jpl_url"),
-        "is_hazardous": neo.get("is_potentially_hazardous_asteroid", False),
-        "close_approach_datetime": close_approach_datetime,
-        "close_approach_date": approach.get("close_approach_date"),
-        "relative_velocity_mph": parse_float(velocity.get("miles_per_hour")),
-        "miss_distance_miles": parse_float(miss_distance.get("miles")),
-        "estimated_diameter_min_ft": parse_float(diameter.get("estimated_diameter_min")),
-        "estimated_diameter_max_ft": parse_float(diameter.get("estimated_diameter_max")),
-        "fetched_at": fetched_at,
-    }
-
     if existing:
-        for key, value in payload.items():
-            setattr(existing, key, value)
-    else:
-        db.add(NeoEvent(**payload))
+        existing.name = neo.get("name")
+        existing.nasa_jpl_url = neo.get("nasa_jpl_url")
+        existing.absolute_magnitude_h = neo.get("absolute_magnitude_h")
+        existing.estimated_diameter_min_miles = (
+            neo.get("estimated_diameter", {})
+            .get("miles", {})
+            .get("estimated_diameter_min")
+        )
+        existing.estimated_diameter_max_miles = (
+            neo.get("estimated_diameter", {})
+            .get("miles", {})
+            .get("estimated_diameter_max")
+        )
+        existing.is_potentially_hazardous_asteroid = neo.get(
+            "is_potentially_hazardous_asteroid"
+        )
+        existing.close_approach_datetime = close_approach_datetime
+        existing.miss_distance_miles = miss_distance_miles
+        existing.relative_velocity_mph = relative_velocity_mph
+        existing.orbiting_body = approach.get("orbiting_body")
+        existing.raw_data = neo
+        return existing
+
+    event = NeoEvent(
+        neo_reference_id=neo.get("neo_reference_id"),
+        name=neo.get("name"),
+        nasa_jpl_url=neo.get("nasa_jpl_url"),
+        absolute_magnitude_h=neo.get("absolute_magnitude_h"),
+        estimated_diameter_min_miles=(
+            neo.get("estimated_diameter", {})
+            .get("miles", {})
+            .get("estimated_diameter_min")
+        ),
+        estimated_diameter_max_miles=(
+            neo.get("estimated_diameter", {})
+            .get("miles", {})
+            .get("estimated_diameter_max")
+        ),
+        is_potentially_hazardous_asteroid=neo.get(
+            "is_potentially_hazardous_asteroid"
+        ),
+        close_approach_date=close_approach_date,
+        close_approach_datetime=close_approach_datetime,
+        miss_distance_miles=miss_distance_miles,
+        relative_velocity_mph=relative_velocity_mph,
+        orbiting_body=approach.get("orbiting_body"),
+        raw_data=neo,
+    )
+
+    db.add(event)
+    return event
 
 
-def run():
-    fetched_at = datetime.now(timezone.utc)
-    data = fetch_neows_feed()
-
+def run_etl():
+    data = fetch_neows_data()
     near_earth_objects = data.get("near_earth_objects", {})
 
     db = SessionLocal()
 
-    inserted_or_updated = 0
-
     try:
-        for date_key, neos in near_earth_objects.items():
-            for neo in neos:
-                approaches = neo.get("close_approach_data", [])
+        count = 0
 
-                for approach in approaches:
-                    upsert_neo_event(db, neo, approach, fetched_at)
-                    inserted_or_updated += 1
+        for date_key, objects in near_earth_objects.items():
+            for neo in objects:
+                close_approach_data = neo.get("close_approach_data", [])
+
+                if not close_approach_data:
+                    continue
+
+                approach = close_approach_data[0]
+                upsert_neo_event(db, neo, approach)
+                count += 1
 
         db.commit()
+        print(f"NeoWs ETL complete. Upserted {count} records.")
 
-    except Exception:
+    except Exception as exc:
         db.rollback()
+        print(f"NeoWs ETL failed: {exc}")
         raise
 
     finally:
         db.close()
 
-    print(f"NeoWs ETL complete. Rows inserted/updated: {inserted_or_updated}")
-
 
 if __name__ == "__main__":
-    run()
+    run_etl()

@@ -28,8 +28,7 @@ export default function App() {
         row.name?.toLowerCase().includes(normalizedSearch) ||
         row.neo_reference_id?.toLowerCase().includes(normalizedSearch)
 
-      const matchesHazard =
-        !hazardousOnly || row.is_hazardous === true
+      const matchesHazard = !hazardousOnly || row.is_hazardous === true
 
       return matchesSearch && matchesHazard
     })
@@ -62,16 +61,22 @@ export default function App() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#0b1020",
+        background:
+          "radial-gradient(circle at top left, rgba(59,130,246,0.16), transparent 30%), #0b1020",
         color: "#e5e7eb",
         padding: "32px",
         fontFamily: "Arial, sans-serif",
       }}
     >
       <header style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0, fontSize: "36px" }}>Astraeus Command</h1>
-        <p style={{ marginTop: "8px", color: "#94a3b8" }}>
+        <div style={{ color: "#22d3ee", fontSize: "13px", letterSpacing: "0.16em", textTransform: "uppercase" }}>
+          Astraeus Command Interface
+        </div>
+        <h1 style={{ margin: "6px 0 0", fontSize: "40px" }}>
           Near-Earth Object Tracking
+        </h1>
+        <p style={{ marginTop: "8px", color: "#94a3b8" }}>
+          Live NeoWs telemetry feed, filtered through Astraeus Command.
         </p>
       </header>
 
@@ -93,6 +98,7 @@ export default function App() {
               label="Potentially Hazardous"
               value={stats.hazardous}
               subtext={`${stats.total ? ((stats.hazardous / stats.total) * 100).toFixed(1) : 0}% of feed`}
+              danger={stats.hazardous > 0}
             />
 
             <KpiCard
@@ -121,8 +127,9 @@ export default function App() {
               border: "1px solid #24304a",
               borderRadius: "14px",
               padding: "16px",
-              background: "#0f172a",
+              background: "rgba(15, 23, 42, 0.92)",
               marginBottom: "24px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             }}
           >
             <div
@@ -194,18 +201,81 @@ export default function App() {
               <div
                 key={row.id}
                 style={{
-                  border: "1px solid #24304a",
-                  borderRadius: "10px",
-                  padding: "12px",
-                  marginBottom: "10px",
-                  background: row.is_hazardous ? "#2a1218" : "#121a2b",
+                  border: row.is_hazardous ? "1px solid #ef4444" : "1px solid #24304a",
+                  borderRadius: "14px",
+                  padding: "16px",
+                  marginBottom: "12px",
+                  background: row.is_hazardous
+                    ? "linear-gradient(180deg, #2a1218 0%, #1a0f13 100%)"
+                    : "linear-gradient(180deg, #121a2b 0%, #0f172a 100%)",
+                  boxShadow: row.is_hazardous
+                    ? "0 0 28px rgba(239,68,68,0.16)"
+                    : "0 12px 28px rgba(0,0,0,0.22)",
                 }}
               >
-                <strong>{row.name}</strong>
-                <div>Date: {row.close_approach_date}</div>
-                <div>Velocity: {row.relative_velocity_mph?.toLocaleString()} mph</div>
-                <div>Miss Distance: {row.miss_distance_miles?.toLocaleString()} miles</div>
-                <div>Hazardous: {row.is_hazardous ? "Yes" : "No"}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
+                  <div>
+                    <div style={{ fontSize: "18px", fontWeight: 800 }}>
+                      {row.name}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#94a3b8", marginTop: "3px" }}>
+                      Reference ID: {row.neo_reference_id}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      alignSelf: "flex-start",
+                      border: row.is_hazardous ? "1px solid #ef4444" : "1px solid #22d3ee",
+                      color: row.is_hazardous ? "#fecaca" : "#a5f3fc",
+                      background: row.is_hazardous ? "rgba(127,29,29,0.6)" : "rgba(8,47,73,0.6)",
+                      borderRadius: "999px",
+                      padding: "6px 10px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.is_hazardous ? "Hazardous" : "Nominal"}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "12px",
+                    marginTop: "16px",
+                  }}
+                >
+                  <Metric label="Approach Date" value={row.close_approach_date || "N/A"} />
+                  <Metric
+                    label="Velocity"
+                    value={
+                      row.relative_velocity_mph
+                        ? `${Math.round(row.relative_velocity_mph).toLocaleString()} mph`
+                        : "N/A"
+                    }
+                  />
+                  <Metric
+                    label="Miss Distance"
+                    value={
+                      row.miss_distance_miles
+                        ? `${Math.round(row.miss_distance_miles).toLocaleString()} mi`
+                        : "N/A"
+                    }
+                  />
+                  <Metric
+                    label="Estimated Diameter"
+                    value={
+                      row.estimated_diameter_max_ft
+                        ? `${Math.round(row.estimated_diameter_min_ft).toLocaleString()}–${Math.round(row.estimated_diameter_max_ft).toLocaleString()} ft`
+                        : "N/A"
+                    }
+                  />
+                </div>
               </div>
             ))}
 
@@ -228,15 +298,19 @@ export default function App() {
   )
 }
 
-function KpiCard({ label, value, subtext }) {
+function KpiCard({ label, value, subtext, danger = false }) {
   return (
     <div
       style={{
-        border: "1px solid #24304a",
+        border: danger ? "1px solid #ef4444" : "1px solid #24304a",
         borderRadius: "14px",
         padding: "18px",
-        background: "linear-gradient(180deg, #121a2b 0%, #0f172a 100%)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+        background: danger
+          ? "linear-gradient(180deg, #2a1218 0%, #0f172a 100%)"
+          : "linear-gradient(180deg, #121a2b 0%, #0f172a 100%)",
+        boxShadow: danger
+          ? "0 0 30px rgba(239,68,68,0.14)"
+          : "0 10px 30px rgba(0,0,0,0.25)",
       }}
     >
       <div
@@ -262,6 +336,32 @@ function KpiCard({ label, value, subtext }) {
       </div>
 
       <div style={{ color: "#64748b", fontSize: "14px" }}>{subtext}</div>
+    </div>
+  )
+}
+
+function Metric({ label, value }) {
+  return (
+    <div
+      style={{
+        border: "1px solid rgba(51,65,85,0.8)",
+        borderRadius: "10px",
+        padding: "10px",
+        background: "rgba(2,6,23,0.45)",
+      }}
+    >
+      <div
+        style={{
+          color: "#64748b",
+          fontSize: "12px",
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: "15px", fontWeight: 700 }}>{value}</div>
     </div>
   )
 }

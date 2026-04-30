@@ -99,11 +99,15 @@ h1 {
   margin-top: 20px;
 }
 
-.kpi-card {
+.kpi-card,
+.chart-card {
   padding: 20px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 20px;
-  background: rgba(15, 23, 42, 0.78);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.68)),
+    rgba(15, 23, 42, 0.78);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
 }
 
 .kpi-card p {
@@ -184,7 +188,8 @@ h1 {
 }
 
 .control-panel button,
-.close-btn {
+.close-btn,
+.filter-strip button {
   cursor: pointer;
   border: 1px solid rgba(125, 211, 252, 0.28);
   border-radius: 14px;
@@ -199,9 +204,37 @@ h1 {
 
 .control-panel button:hover,
 .close-btn:hover,
-.jpl-link:hover {
+.jpl-link:hover,
+.filter-strip button:hover {
   border-color: rgba(56, 189, 248, 0.8);
   background: rgba(14, 165, 233, 0.28);
+}
+
+.filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(250, 204, 21, 0.24);
+  border-radius: 18px;
+  background: rgba(113, 63, 18, 0.18);
+}
+
+.filter-title {
+  color: #facc15;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.filter-strip button {
+  padding: 9px 12px;
+  color: #fde68a;
+  border-color: rgba(250, 204, 21, 0.32);
+  background: rgba(113, 63, 18, 0.26);
 }
 
 .message-box {
@@ -218,6 +251,110 @@ h1 {
   color: #fecdd3;
   background: rgba(76, 5, 25, 0.45);
 }
+
+/* ================= CHARTS ================= */
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.15fr 1.15fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.chart-card {
+  min-height: 330px;
+  overflow: hidden;
+  position: relative;
+}
+
+.chart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(125, 211, 252, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.chart-header {
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.chart-header h2 {
+  margin-bottom: 0;
+  font-size: 1.05rem;
+}
+
+.chart-card .recharts-wrapper {
+  font-size: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.chart-card .recharts-cartesian-axis-tick-value {
+  fill: #94a3b8;
+}
+
+.donut-wrap {
+  position: relative;
+}
+
+.donut-center {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.donut-center strong {
+  color: #f8fafc;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.donut-center span {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.mission-tooltip {
+  padding: 12px 14px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.96);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.tooltip-label {
+  margin-bottom: 6px;
+  color: #7dd3fc;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tooltip-value {
+  margin-bottom: 0;
+  color: #e2e8f0;
+}
+
+.tooltip-value strong {
+  color: #f8fafc;
+}
+
+/* ================= TABLE + DRAWER ================= */
 
 .dashboard-grid {
   display: grid;
@@ -386,6 +523,12 @@ h1 {
   font-weight: 900;
 }
 
+@media (max-width: 1200px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1050px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -417,5 +560,13 @@ h1 {
 
   .status-pill {
     width: fit-content;
+  }
+
+  .filter-strip {
+    align-items: stretch;
+  }
+
+  .filter-strip button {
+    width: 100%;
   }
 }

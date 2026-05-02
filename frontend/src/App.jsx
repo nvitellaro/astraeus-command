@@ -103,6 +103,8 @@ export default function App() {
 
   const [selectedDistanceBand, setSelectedDistanceBand] = useState(null);
   const [selectedVelocityBand, setSelectedVelocityBand] = useState(null);
+  const [hoveredDistanceBand, setHoveredDistanceBand] = useState(null);
+  const [hoveredVelocityBand, setHoveredVelocityBand] = useState(null);
 
   useEffect(() => {
     async function fetchNeoEvents() {
@@ -182,11 +184,17 @@ export default function App() {
 
     const closest = [...neoEvents]
       .filter((neo) => neo.miss_distance_miles)
-      .sort((a, b) => Number(a.miss_distance_miles) - Number(b.miss_distance_miles))[0];
+      .sort(
+        (a, b) =>
+          Number(a.miss_distance_miles) - Number(b.miss_distance_miles)
+      )[0];
 
     const fastest = [...neoEvents]
       .filter((neo) => neo.relative_velocity_mph)
-      .sort((a, b) => Number(b.relative_velocity_mph) - Number(a.relative_velocity_mph))[0];
+      .sort(
+        (a, b) =>
+          Number(b.relative_velocity_mph) - Number(a.relative_velocity_mph)
+      )[0];
 
     return {
       total: neoEvents.length,
@@ -225,10 +233,16 @@ export default function App() {
     setSelectedAsteroid(null);
     setSelectedDistanceBand(null);
     setSelectedVelocityBand(null);
+    setHoveredDistanceBand(null);
+    setHoveredVelocityBand(null);
   }
 
   const hasActiveFilters =
-    search || hazardousOnly || selectedDistanceBand || selectedVelocityBand || sortBy !== "time";
+    search ||
+    hazardousOnly ||
+    selectedDistanceBand ||
+    selectedVelocityBand ||
+    sortBy !== "time";
 
   return (
     <div className="app-shell">
@@ -307,17 +321,25 @@ export default function App() {
           <span className="filter-title">Active Intelligence Filters</span>
 
           {search && <button onClick={() => setSearch("")}>Search: {search} ×</button>}
-          {hazardousOnly && <button onClick={() => setHazardousOnly(false)}>Hazardous Only ×</button>}
+
+          {hazardousOnly && (
+            <button onClick={() => setHazardousOnly(false)}>
+              Hazardous Only ×
+            </button>
+          )}
+
           {selectedDistanceBand && (
             <button onClick={() => setSelectedDistanceBand(null)}>
               Distance: {selectedDistanceBand} ×
             </button>
           )}
+
           {selectedVelocityBand && (
             <button onClick={() => setSelectedVelocityBand(null)}>
               Velocity: {selectedVelocityBand} ×
             </button>
           )}
+
           {sortBy !== "time" && (
             <button onClick={() => setSortBy("time")}>Sort: {sortBy} ×</button>
           )}
@@ -381,6 +403,10 @@ export default function App() {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart
                   data={chartData.distanceData}
+                  onMouseMove={(state) => {
+                    if (state?.activeLabel) setHoveredDistanceBand(state.activeLabel);
+                  }}
+                  onMouseLeave={() => setHoveredDistanceBand(null)}
                   onClick={(state) => {
                     if (!state?.activeLabel) return;
                     setSelectedDistanceBand((prev) =>
@@ -396,7 +422,12 @@ export default function App() {
                     {chartData.distanceData.map((entry) => (
                       <Cell
                         key={entry.name}
-                        fill={entry.name === selectedDistanceBand ? "#facc15" : "#38bdf8"}
+                        fill={
+                          entry.name === selectedDistanceBand ||
+                          entry.name === hoveredDistanceBand
+                            ? "#facc15"
+                            : "#38bdf8"
+                        }
                       />
                     ))}
                   </Bar>
@@ -413,6 +444,10 @@ export default function App() {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart
                   data={chartData.velocityData}
+                  onMouseMove={(state) => {
+                    if (state?.activeLabel) setHoveredVelocityBand(state.activeLabel);
+                  }}
+                  onMouseLeave={() => setHoveredVelocityBand(null)}
                   onClick={(state) => {
                     if (!state?.activeLabel) return;
                     setSelectedVelocityBand((prev) =>
@@ -428,7 +463,12 @@ export default function App() {
                     {chartData.velocityData.map((entry) => (
                       <Cell
                         key={entry.name}
-                        fill={entry.name === selectedVelocityBand ? "#facc15" : "#a78bfa"}
+                        fill={
+                          entry.name === selectedVelocityBand ||
+                          entry.name === hoveredVelocityBand
+                            ? "#facc15"
+                            : "#a78bfa"
+                        }
                       />
                     ))}
                   </Bar>
@@ -437,7 +477,78 @@ export default function App() {
             </div>
           </section>
 
-          <main className={`dashboard-grid ${selectedAsteroid ? "drawer-open" : ""}`}>
+          {selectedAsteroid && (
+            <section className="selected-object-tile">
+              <div className="selected-object-header">
+                <div>
+                  <p className="eyebrow">Selected Object</p>
+                  <h2>{getObjectName(selectedAsteroid)}</h2>
+                </div>
+
+                <button
+                  className="close-btn"
+                  onClick={() => setSelectedAsteroid(null)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div
+                className={`hazard-banner ${
+                  getHazardValue(selectedAsteroid) ? "hazard" : "safe"
+                }`}
+              >
+                {getHazardValue(selectedAsteroid)
+                  ? "Potentially Hazardous Asteroid"
+                  : "No Hazard Flag"}
+              </div>
+
+              <div className="selected-object-grid">
+                <div>
+                  <p>Neo Reference ID</p>
+                  <h3>{selectedAsteroid.neo_reference_id || "N/A"}</h3>
+                </div>
+
+                <div>
+                  <p>Approach Date</p>
+                  <h3>{selectedAsteroid.close_approach_date || "N/A"}</h3>
+                </div>
+
+                <div>
+                  <p>Approach DateTime</p>
+                  <h3>{selectedAsteroid.close_approach_datetime || "N/A"}</h3>
+                </div>
+
+                <div>
+                  <p>Miss Distance</p>
+                  <h3>{formatDistance(selectedAsteroid.miss_distance_miles)}</h3>
+                </div>
+
+                <div>
+                  <p>Relative Velocity</p>
+                  <h3>{formatVelocity(selectedAsteroid.relative_velocity_mph)}</h3>
+                </div>
+
+                <div>
+                  <p>Hazardous</p>
+                  <h3>{getHazardValue(selectedAsteroid) ? "Yes" : "No"}</h3>
+                </div>
+              </div>
+
+              {selectedAsteroid.nasa_jpl_url && (
+                <a
+                  className="jpl-link"
+                  href={selectedAsteroid.nasa_jpl_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open NASA / JPL Record →
+                </a>
+              )}
+            </section>
+          )}
+
+          <main className="dashboard-grid">
             <section className="tracking-table-wrap">
               <div className="section-header">
                 <div>
@@ -462,12 +573,20 @@ export default function App() {
 
                   const isHazardous = getHazardValue(neo);
 
+                  const isChartHighlighted =
+                    (hoveredDistanceBand &&
+                      getDistanceBand(neo.miss_distance_miles) === hoveredDistanceBand) ||
+                    (hoveredVelocityBand &&
+                      getVelocityBand(neo.relative_velocity_mph) === hoveredVelocityBand);
+
                   return (
                     <button
                       key={`${neo.neo_reference_id}-${neo.close_approach_date}`}
                       className={`table-row data-row ${
                         isHazardous ? "hazard-row" : ""
-                      } ${isSelected ? "selected-row" : ""}`}
+                      } ${isSelected ? "selected-row" : ""} ${
+                        isChartHighlighted ? "chart-highlight-row" : ""
+                      }`}
                       onClick={() => setSelectedAsteroid(neo)}
                     >
                       <span>{getObjectName(neo)}</span>
@@ -480,77 +599,6 @@ export default function App() {
                 })}
               </div>
             </section>
-
-            {selectedAsteroid && (
-              <aside className="detail-drawer">
-                <div className="drawer-header">
-                  <div>
-                    <p className="eyebrow">Selected Object</p>
-                    <h2>{getObjectName(selectedAsteroid)}</h2>
-                  </div>
-
-                  <button
-                    className="close-btn"
-                    onClick={() => setSelectedAsteroid(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div
-                  className={`hazard-banner ${
-                    getHazardValue(selectedAsteroid) ? "hazard" : "safe"
-                  }`}
-                >
-                  {getHazardValue(selectedAsteroid)
-                    ? "Potentially Hazardous Asteroid"
-                    : "No Hazard Flag"}
-                </div>
-
-                <div className="detail-grid">
-                  <div>
-                    <p>Neo Reference ID</p>
-                    <h3>{selectedAsteroid.neo_reference_id || "N/A"}</h3>
-                  </div>
-
-                  <div>
-                    <p>Approach Date</p>
-                    <h3>{selectedAsteroid.close_approach_date || "N/A"}</h3>
-                  </div>
-
-                  <div>
-                    <p>Approach DateTime</p>
-                    <h3>{selectedAsteroid.close_approach_datetime || "N/A"}</h3>
-                  </div>
-
-                  <div>
-                    <p>Miss Distance</p>
-                    <h3>{formatDistance(selectedAsteroid.miss_distance_miles)}</h3>
-                  </div>
-
-                  <div>
-                    <p>Relative Velocity</p>
-                    <h3>{formatVelocity(selectedAsteroid.relative_velocity_mph)}</h3>
-                  </div>
-
-                  <div>
-                    <p>Hazardous</p>
-                    <h3>{getHazardValue(selectedAsteroid) ? "Yes" : "No"}</h3>
-                  </div>
-                </div>
-
-                {selectedAsteroid.nasa_jpl_url && (
-                  <a
-                    className="jpl-link"
-                    href={selectedAsteroid.nasa_jpl_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open NASA / JPL Record →
-                  </a>
-                )}
-              </aside>
-            )}
           </main>
         </>
       )}

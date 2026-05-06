@@ -115,6 +115,9 @@ export default function App() {
   const [cmeSummary, setCmeSummary] = useState(null);
   const [cmeEvents, setCmeEvents] = useState([]);
 
+  const [gstSummary, setGstSummary] = useState(null);
+  const [gstEvents, setGstEvents] = useState([]);
+
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
   const [sortBy, setSortBy] = useState("time");
@@ -139,6 +142,8 @@ export default function App() {
           solarRecentResponse,
           cmeSummaryResponse,
           cmeRecentResponse,
+          gstSummaryResponse,
+          gstRecentResponse,
         ] = await Promise.all([
           fetch(`${API_BASE}/api/neows/upcoming`),
           fetch(`${API_BASE}/api/neows/last-refresh`),
@@ -147,6 +152,8 @@ export default function App() {
           fetch(`${API_BASE}/api/solar-flares/recent`),
           fetch(`${API_BASE}/api/cme/summary`),
           fetch(`${API_BASE}/api/cme/recent`),
+          fetch(`${API_BASE}/api/gst/summary`),
+          fetch(`${API_BASE}/api/gst/recent`),
         ]);
 
         if (!neoResponse.ok) {
@@ -184,6 +191,16 @@ export default function App() {
         if (cmeRecentResponse.ok) {
           const cmeRecentData = await cmeRecentResponse.json();
           setCmeEvents(cmeRecentData.rows || []);
+        }
+
+        if (gstSummaryResponse.ok) {
+          const gstSummaryData = await gstSummaryResponse.json();
+          setGstSummary(gstSummaryData);
+        }
+
+        if (gstRecentResponse.ok) {
+          const gstRecentData = await gstRecentResponse.json();
+          setGstEvents(gstRecentData.rows || []);
         }
       } catch (err) {
         setError(err.message || "Failed to load dashboard data");
@@ -854,6 +871,66 @@ export default function App() {
                   <span>{cme.source_location || "Unknown"}</span>
                   <span>{cme.active_region_num || "N/A"}</span>
                   <span>{cme.linked_events ? "YES" : "NO"}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className="tracking-table-wrap solar-panel">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">DONKI GST Intelligence</p>
+                <h2>Recent Geomagnetic Storms</h2>
+              </div>
+
+              <span>{gstSummary?.total_gst ?? 0} detected</span>
+            </div>
+
+            <div className="solar-summary-grid">
+              <div className="kpi-card">
+                <p>Total GST Events</p>
+                <h2>{gstSummary?.total_gst ?? 0}</h2>
+              </div>
+
+              <div className="kpi-card danger">
+                <p>Severe Storms</p>
+                <h2>{gstSummary?.severe_storms ?? 0}</h2>
+                <span>Kp ≥ 5</span>
+              </div>
+
+              <div className="kpi-card">
+                <p>Strongest Storm</p>
+                <h2>{gstSummary?.strongest_storm?.kp_index ?? "N/A"}</h2>
+                <span>
+                  {gstSummary?.strongest_storm?.start_time
+                    ? formatDateTime(gstSummary.strongest_storm.start_time)
+                    : "No storm data"}
+                </span>
+              </div>
+            </div>
+
+            <div className="tracking-table">
+              <div className="table-row table-head">
+                <span>GST ID</span>
+                <span>Start Time</span>
+                <span>Kp Index</span>
+                <span>Linked</span>
+                <span>Record</span>
+              </div>
+
+              {gstEvents.map((gst) => (
+                <a
+                  key={gst.gst_id}
+                  href={gst.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="table-row data-row"
+                >
+                  <span>{gst.gst_id}</span>
+                  <span>{formatDateTime(gst.start_time)}</span>
+                  <span>{gst.kp_index || "N/A"}</span>
+                  <span>{gst.linked_events ? "YES" : "NO"}</span>
+                  <span>DONKI →</span>
                 </a>
               ))}
             </div>

@@ -46,3 +46,26 @@ class SolarFlareEvent(Base):
     link = Column(String)
 
     fetched_at = Column(DateTime, index=True)
+
+
+class CmeEvent(Base):
+    __tablename__ = "cme_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    cme_id = Column(String, unique=True, index=True)
+
+    start_time = Column(DateTime, index=True)
+
+    source_location = Column(String)
+    active_region_num = Column(Integer)
+
+    instruments = Column(String)
+
+    linked_events = Column(String)
+
+    note = Column(String)
+
+    link = Column(String)
+
+    fetched_at = Column(DateTime, index=True)

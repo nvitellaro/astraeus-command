@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import Base, engine
-from app.models import NeoEvent, SolarFlareEvent
+from app.models import CmeEvent, NeoEvent, SolarFlareEvent
+from app.routes.cme import router as cme_router
 from app.routes.neows import router as neows_router
 from app.routes.solar_flares import router as solar_flares_router
 
@@ -27,6 +28,7 @@ app.include_router(
     prefix="/api/solar-flares",
     tags=["Solar Flares"],
 )
+app.include_router(cme_router, prefix="/api/cme", tags=["CME"])
 
 
 @app.get("/api/health")
@@ -43,5 +45,5 @@ def health_db():
     return {
         "status": "ok",
         "database": "connected",
-        "tables": ["neo_events", "solar_flare_events"],
+        "tables": ["neo_events", "solar_flare_events", "cme_events"],
     }

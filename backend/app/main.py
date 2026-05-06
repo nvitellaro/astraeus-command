@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import Base, engine
-from app.models import NeoEvent
+from app.models import NeoEvent, SolarFlareEvent
 from app.routes.neows import router as neows_router
+from app.routes.solar_flares import router as solar_flares_router
 
 app = FastAPI(title="Astraeus Command API")
 
@@ -21,6 +22,11 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 app.include_router(neows_router, prefix="/api/neows", tags=["NeoWs"])
+app.include_router(
+    solar_flares_router,
+    prefix="/api/solar-flares",
+    tags=["Solar Flares"],
+)
 
 
 @app.get("/api/health")
@@ -37,5 +43,5 @@ def health_db():
     return {
         "status": "ok",
         "database": "connected",
-        "table": "neo_events",
+        "tables": ["neo_events", "solar_flare_events"],
     }

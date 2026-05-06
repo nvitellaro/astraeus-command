@@ -23,3 +23,26 @@ class NeoEvent(Base):
     estimated_diameter_max_ft = Column(Float)
 
     fetched_at = Column(DateTime, index=True)
+
+
+class SolarFlareEvent(Base):
+    __tablename__ = "solar_flare_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    flr_id = Column(String, unique=True, index=True)
+
+    begin_time = Column(DateTime, index=True)
+    peak_time = Column(DateTime, index=True)
+    end_time = Column(DateTime, index=True)
+
+    class_type = Column(String, index=True)
+    source_location = Column(String)
+
+    active_region_num = Column(Integer)
+
+    linked_events = Column(String)
+
+    link = Column(String)
+
+    fetched_at = Column(DateTime, index=True)

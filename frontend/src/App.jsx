@@ -1,5 +1,8 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+
 import NeoCommand from "./pages/NeoCommand";
+import SolarFlareCommand from "./pages/SolarFlareCommand";
+
 import "./App.css";
 
 function LandingPage() {
@@ -28,7 +31,7 @@ function LandingPage() {
           <span>Asteroid tracking, hazard flags, approach analytics</span>
         </Link>
 
-        <Link to="/neo-command" className="kpi-card command-tile">
+        <Link to="/solar-flares" className="kpi-card command-tile">
           <p>Solar Flares</p>
           <h2>DONKI FLR</h2>
           <span>Recent flare activity and class intelligence</span>
@@ -55,7 +58,13 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+
         <Route path="/neo-command" element={<NeoCommand />} />
+
+        <Route
+          path="/solar-flares"
+          element={<SolarFlareCommand />}
+        />
       </Routes>
     </BrowserRouter>
   );

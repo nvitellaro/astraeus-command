@@ -112,6 +112,9 @@ export default function App() {
   const [solarSummary, setSolarSummary] = useState(null);
   const [solarFlares, setSolarFlares] = useState([]);
 
+  const [cmeSummary, setCmeSummary] = useState(null);
+  const [cmeEvents, setCmeEvents] = useState([]);
+
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
   const [sortBy, setSortBy] = useState("time");
@@ -134,12 +137,16 @@ export default function App() {
           summaryResponse,
           solarSummaryResponse,
           solarRecentResponse,
+          cmeSummaryResponse,
+          cmeRecentResponse,
         ] = await Promise.all([
           fetch(`${API_BASE}/api/neows/upcoming`),
           fetch(`${API_BASE}/api/neows/last-refresh`),
           fetch(`${API_BASE}/api/neows/summary`),
           fetch(`${API_BASE}/api/solar-flares/summary`),
           fetch(`${API_BASE}/api/solar-flares/recent`),
+          fetch(`${API_BASE}/api/cme/summary`),
+          fetch(`${API_BASE}/api/cme/recent`),
         ]);
 
         if (!neoResponse.ok) {
@@ -167,6 +174,16 @@ export default function App() {
         if (solarRecentResponse.ok) {
           const solarRecentData = await solarRecentResponse.json();
           setSolarFlares(solarRecentData.rows || []);
+        }
+
+        if (cmeSummaryResponse.ok) {
+          const cmeSummaryData = await cmeSummaryResponse.json();
+          setCmeSummary(cmeSummaryData);
+        }
+
+        if (cmeRecentResponse.ok) {
+          const cmeRecentData = await cmeRecentResponse.json();
+          setCmeEvents(cmeRecentData.rows || []);
         }
       } catch (err) {
         setError(err.message || "Failed to load dashboard data");
@@ -775,6 +792,68 @@ export default function App() {
                   <span>{formatDateTime(flare.begin_time)}</span>
                   <span>{flare.active_region_num || "N/A"}</span>
                   <span>{flare.source_location || "Unknown"}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className="tracking-table-wrap solar-panel">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">DONKI CME Intelligence</p>
+                <h2>Recent Coronal Mass Ejections</h2>
+              </div>
+
+              <span>{cmeSummary?.total_cmes ?? 0} detected</span>
+            </div>
+
+            <div className="solar-summary-grid">
+              <div className="kpi-card">
+                <p>Total CMEs</p>
+                <h2>{cmeSummary?.total_cmes ?? 0}</h2>
+              </div>
+
+              <div className="kpi-card danger">
+                <p>Linked Events</p>
+                <h2>{cmeSummary?.linked_event_count ?? 0}</h2>
+                <span>flare/cme correlations</span>
+              </div>
+
+              <div className="kpi-card">
+                <p>Latest CME</p>
+                <span>
+                  {cmeSummary?.latest_cme?.start_time
+                    ? formatDateTime(cmeSummary.latest_cme.start_time)
+                    : "N/A"}
+                </span>
+                <span>
+                  {cmeSummary?.latest_cme?.source_location || "Unknown"}
+                </span>
+              </div>
+            </div>
+
+            <div className="tracking-table">
+              <div className="table-row table-head">
+                <span>CME ID</span>
+                <span>Start Time</span>
+                <span>Region</span>
+                <span>AR</span>
+                <span>Linked</span>
+              </div>
+
+              {cmeEvents.map((cme) => (
+                <a
+                  key={cme.cme_id}
+                  href={cme.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="table-row data-row"
+                >
+                  <span>{cme.cme_id}</span>
+                  <span>{formatDateTime(cme.start_time)}</span>
+                  <span>{cme.source_location || "Unknown"}</span>
+                  <span>{cme.active_region_num || "N/A"}</span>
+                  <span>{cme.linked_events ? "YES" : "NO"}</span>
                 </a>
               ))}
             </div>

@@ -107,6 +107,7 @@ export default function App() {
   const [error, setError] = useState("");
 
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [summary, setSummary] = useState(null);
 
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
@@ -124,10 +125,12 @@ export default function App() {
         setLoading(true);
         setError("");
 
-        const [neoResponse, refreshResponse] = await Promise.all([
-          fetch(`${API_BASE}/api/neows/upcoming`),
-          fetch(`${API_BASE}/api/neows/last-refresh`),
-        ]);
+        const [neoResponse, refreshResponse, summaryResponse] =
+          await Promise.all([
+            fetch(`${API_BASE}/api/neows/upcoming`),
+            fetch(`${API_BASE}/api/neows/last-refresh`),
+            fetch(`${API_BASE}/api/neows/summary`),
+          ]);
 
         if (!neoResponse.ok) {
           throw new Error(`API returned ${neoResponse.status}`);
@@ -139,6 +142,11 @@ export default function App() {
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json();
           setLastRefresh(refreshData.last_refresh || null);
+        }
+
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          setSummary(summaryData);
         }
       } catch (err) {
         setError(err.message || "Failed to load NeoWs data");
@@ -313,32 +321,48 @@ export default function App() {
       <section className="kpi-grid">
         <div className="kpi-card">
           <p>Total Tracked Objects</p>
-          <h2>{kpis.total}</h2>
+          <h2>{summary?.total_objects ?? kpis.total}</h2>
         </div>
 
         <div className="kpi-card danger">
           <p>Hazardous Objects</p>
-          <h2>{kpis.hazardous}</h2>
+          <h2>{summary?.hazardous_objects ?? kpis.hazardous}</h2>
         </div>
 
         <div className="kpi-card">
           <p>Closest Approach</p>
           <h2>
-            {kpis.closest
+            {summary?.closest_object
+              ? formatDistance(summary.closest_object.miss_distance_miles)
+              : kpis.closest
               ? formatDistance(kpis.closest.miss_distance_miles)
               : "N/A"}
           </h2>
-          <span>{kpis.closest ? getObjectName(kpis.closest) : "No object"}</span>
+          <span>
+            {summary?.closest_object
+              ? summary.closest_object.name
+              : kpis.closest
+              ? getObjectName(kpis.closest)
+              : "No object"}
+          </span>
         </div>
 
         <div className="kpi-card">
           <p>Fastest Object</p>
           <h2>
-            {kpis.fastest
+            {summary?.fastest_object
+              ? formatVelocity(summary.fastest_object.relative_velocity_mph)
+              : kpis.fastest
               ? formatVelocity(kpis.fastest.relative_velocity_mph)
               : "N/A"}
           </h2>
-          <span>{kpis.fastest ? getObjectName(kpis.fastest) : "No object"}</span>
+          <span>
+            {summary?.fastest_object
+              ? summary.fastest_object.name
+              : kpis.fastest
+              ? getObjectName(kpis.fastest)
+              : "No object"}
+          </span>
         </div>
       </section>
 

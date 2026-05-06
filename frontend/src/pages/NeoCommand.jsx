@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -101,22 +102,13 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function App() {
+export default function NeoCommand() {
   const [neoEvents, setNeoEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [lastRefresh, setLastRefresh] = useState(null);
   const [summary, setSummary] = useState(null);
-
-  const [solarSummary, setSolarSummary] = useState(null);
-  const [solarFlares, setSolarFlares] = useState([]);
-
-  const [cmeSummary, setCmeSummary] = useState(null);
-  const [cmeEvents, setCmeEvents] = useState([]);
-
-  const [gstSummary, setGstSummary] = useState(null);
-  const [gstEvents, setGstEvents] = useState([]);
 
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
@@ -134,27 +126,12 @@ export default function App() {
         setLoading(true);
         setError("");
 
-        const [
-          neoResponse,
-          refreshResponse,
-          summaryResponse,
-          solarSummaryResponse,
-          solarRecentResponse,
-          cmeSummaryResponse,
-          cmeRecentResponse,
-          gstSummaryResponse,
-          gstRecentResponse,
-        ] = await Promise.all([
-          fetch(`${API_BASE}/api/neows/upcoming`),
-          fetch(`${API_BASE}/api/neows/last-refresh`),
-          fetch(`${API_BASE}/api/neows/summary`),
-          fetch(`${API_BASE}/api/solar-flares/summary`),
-          fetch(`${API_BASE}/api/solar-flares/recent`),
-          fetch(`${API_BASE}/api/cme/summary`),
-          fetch(`${API_BASE}/api/cme/recent`),
-          fetch(`${API_BASE}/api/gst/summary`),
-          fetch(`${API_BASE}/api/gst/recent`),
-        ]);
+        const [neoResponse, refreshResponse, summaryResponse] =
+          await Promise.all([
+            fetch(`${API_BASE}/api/neows/upcoming`),
+            fetch(`${API_BASE}/api/neows/last-refresh`),
+            fetch(`${API_BASE}/api/neows/summary`),
+          ]);
 
         if (!neoResponse.ok) {
           throw new Error(`API returned ${neoResponse.status}`);
@@ -172,38 +149,8 @@ export default function App() {
           const summaryData = await summaryResponse.json();
           setSummary(summaryData);
         }
-
-        if (solarSummaryResponse.ok) {
-          const solarSummaryData = await solarSummaryResponse.json();
-          setSolarSummary(solarSummaryData);
-        }
-
-        if (solarRecentResponse.ok) {
-          const solarRecentData = await solarRecentResponse.json();
-          setSolarFlares(solarRecentData.rows || []);
-        }
-
-        if (cmeSummaryResponse.ok) {
-          const cmeSummaryData = await cmeSummaryResponse.json();
-          setCmeSummary(cmeSummaryData);
-        }
-
-        if (cmeRecentResponse.ok) {
-          const cmeRecentData = await cmeRecentResponse.json();
-          setCmeEvents(cmeRecentData.rows || []);
-        }
-
-        if (gstSummaryResponse.ok) {
-          const gstSummaryData = await gstSummaryResponse.json();
-          setGstSummary(gstSummaryData);
-        }
-
-        if (gstRecentResponse.ok) {
-          const gstRecentData = await gstRecentResponse.json();
-          setGstEvents(gstRecentData.rows || []);
-        }
       } catch (err) {
-        setError(err.message || "Failed to load dashboard data");
+        setError(err.message || "Failed to load NeoWs data");
       } finally {
         setLoading(false);
       }
@@ -351,19 +298,18 @@ export default function App() {
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Space Intelligence Platform</p>
-          <h1>Astraeus Command</h1>
+          <p className="eyebrow">Near-Earth Object Intelligence</p>
+          <h1>NEO Command</h1>
           <p className="subtitle">
-            Public-facing mission-control dashboard tracking near-Earth objects
-            and solar activity from NASA data services.
+            Dedicated mission-control dashboard tracking near-Earth objects from
+            NASA NeoWs.
           </p>
         </div>
 
         <div className="hero-right">
-          <div className="status-pill">
-            <span className="pulse-dot"></span>
-            LIVE DATA LINK
-          </div>
+          <Link to="/" className="status-pill">
+            ← COMMAND HOME
+          </Link>
 
           <div className="etl-timestamp">
             <span className="etl-label">LAST ETL REFRESH</span>
@@ -482,7 +428,7 @@ export default function App() {
         </section>
       )}
 
-      {loading && <div className="message-box">Loading mission telemetry...</div>}
+      {loading && <div className="message-box">Loading NeoWs telemetry...</div>}
       {error && <div className="message-box error">Error: {error}</div>}
 
       {!loading && !error && (
@@ -754,187 +700,6 @@ export default function App() {
               </div>
             </section>
           </main>
-
-          <section className="tracking-table-wrap solar-panel">
-            <div className="section-header">
-              <div>
-                <p className="eyebrow">DONKI Solar Intelligence</p>
-                <h2>Recent Solar Flare Activity</h2>
-              </div>
-
-              <span>{solarSummary?.total_flares ?? 0} detected</span>
-            </div>
-
-            <div className="solar-summary-grid">
-              <div className="kpi-card">
-                <p>Total Solar Flares</p>
-                <h2>{solarSummary?.total_flares ?? 0}</h2>
-              </div>
-
-              <div className="kpi-card danger">
-                <p>Strongest Flare</p>
-                <h2>{solarSummary?.strongest_flare?.class_type ?? "N/A"}</h2>
-                <span>
-                  {solarSummary?.strongest_flare?.source_location ?? "Unknown"}
-                </span>
-              </div>
-
-              <div className="kpi-card">
-                <p>Class Breakdown</p>
-                <span>C-Class: {solarSummary?.class_counts?.C ?? 0}</span>
-                <span>M-Class: {solarSummary?.class_counts?.M ?? 0}</span>
-                <span>X-Class: {solarSummary?.class_counts?.X ?? 0}</span>
-              </div>
-            </div>
-
-            <div className="tracking-table">
-              <div className="table-row table-head">
-                <span>Flare ID</span>
-                <span>Class</span>
-                <span>Begin Time</span>
-                <span>Region</span>
-                <span>Source</span>
-              </div>
-
-              {solarFlares.map((flare) => (
-                <a
-                  key={flare.flr_id}
-                  href={flare.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="table-row data-row"
-                >
-                  <span>{flare.flr_id}</span>
-                  <span>{flare.class_type}</span>
-                  <span>{formatDateTime(flare.begin_time)}</span>
-                  <span>{flare.active_region_num || "N/A"}</span>
-                  <span>{flare.source_location || "Unknown"}</span>
-                </a>
-              ))}
-            </div>
-          </section>
-
-          <section className="tracking-table-wrap solar-panel">
-            <div className="section-header">
-              <div>
-                <p className="eyebrow">DONKI CME Intelligence</p>
-                <h2>Recent Coronal Mass Ejections</h2>
-              </div>
-
-              <span>{cmeSummary?.total_cmes ?? 0} detected</span>
-            </div>
-
-            <div className="solar-summary-grid">
-              <div className="kpi-card">
-                <p>Total CMEs</p>
-                <h2>{cmeSummary?.total_cmes ?? 0}</h2>
-              </div>
-
-              <div className="kpi-card danger">
-                <p>Linked Events</p>
-                <h2>{cmeSummary?.linked_event_count ?? 0}</h2>
-                <span>flare/cme correlations</span>
-              </div>
-
-              <div className="kpi-card">
-                <p>Latest CME</p>
-                <span>
-                  {cmeSummary?.latest_cme?.start_time
-                    ? formatDateTime(cmeSummary.latest_cme.start_time)
-                    : "N/A"}
-                </span>
-                <span>
-                  {cmeSummary?.latest_cme?.source_location || "Unknown"}
-                </span>
-              </div>
-            </div>
-
-            <div className="tracking-table">
-              <div className="table-row table-head">
-                <span>CME ID</span>
-                <span>Start Time</span>
-                <span>Region</span>
-                <span>AR</span>
-                <span>Linked</span>
-              </div>
-
-              {cmeEvents.map((cme) => (
-                <a
-                  key={cme.cme_id}
-                  href={cme.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="table-row data-row"
-                >
-                  <span>{cme.cme_id}</span>
-                  <span>{formatDateTime(cme.start_time)}</span>
-                  <span>{cme.source_location || "Unknown"}</span>
-                  <span>{cme.active_region_num || "N/A"}</span>
-                  <span>{cme.linked_events ? "YES" : "NO"}</span>
-                </a>
-              ))}
-            </div>
-          </section>
-
-          <section className="tracking-table-wrap solar-panel">
-            <div className="section-header">
-              <div>
-                <p className="eyebrow">DONKI GST Intelligence</p>
-                <h2>Recent Geomagnetic Storms</h2>
-              </div>
-
-              <span>{gstSummary?.total_gst ?? 0} detected</span>
-            </div>
-
-            <div className="solar-summary-grid">
-              <div className="kpi-card">
-                <p>Total GST Events</p>
-                <h2>{gstSummary?.total_gst ?? 0}</h2>
-              </div>
-
-              <div className="kpi-card danger">
-                <p>Severe Storms</p>
-                <h2>{gstSummary?.severe_storms ?? 0}</h2>
-                <span>Kp ≥ 5</span>
-              </div>
-
-              <div className="kpi-card">
-                <p>Strongest Storm</p>
-                <h2>{gstSummary?.strongest_storm?.kp_index ?? "N/A"}</h2>
-                <span>
-                  {gstSummary?.strongest_storm?.start_time
-                    ? formatDateTime(gstSummary.strongest_storm.start_time)
-                    : "No storm data"}
-                </span>
-              </div>
-            </div>
-
-            <div className="tracking-table">
-              <div className="table-row table-head">
-                <span>GST ID</span>
-                <span>Start Time</span>
-                <span>Kp Index</span>
-                <span>Linked</span>
-                <span>Record</span>
-              </div>
-
-              {gstEvents.map((gst) => (
-                <a
-                  key={gst.gst_id}
-                  href={gst.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="table-row data-row"
-                >
-                  <span>{gst.gst_id}</span>
-                  <span>{formatDateTime(gst.start_time)}</span>
-                  <span>{gst.kp_index || "N/A"}</span>
-                  <span>{gst.linked_events ? "YES" : "NO"}</span>
-                  <span>DONKI →</span>
-                </a>
-              ))}
-            </div>
-          </section>
         </>
       )}
     </div>

@@ -1,5 +1,7 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 
+import CmeCommand from "./pages/CmeCommand";
+import GstCommand from "./pages/GstCommand";
 import NeoCommand from "./pages/NeoCommand";
 import SolarFlareCommand from "./pages/SolarFlareCommand";
 
@@ -37,13 +39,13 @@ function LandingPage() {
           <span>Recent flare activity and class intelligence</span>
         </Link>
 
-        <Link to="/neo-command" className="kpi-card command-tile">
+        <Link to="/cme-command" className="kpi-card command-tile">
           <p>CME Command</p>
           <h2>DONKI CME</h2>
           <span>Coronal mass ejection monitoring and linked events</span>
         </Link>
 
-        <Link to="/neo-command" className="kpi-card command-tile danger">
+        <Link to="/gst-command" className="kpi-card command-tile danger">
           <p>GST Command</p>
           <h2>DONKI GST</h2>
           <span>Geomagnetic storms, Kp index, and severe events</span>
@@ -58,13 +60,10 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-
         <Route path="/neo-command" element={<NeoCommand />} />
-
-        <Route
-          path="/solar-flares"
-          element={<SolarFlareCommand />}
-        />
+        <Route path="/solar-flares" element={<SolarFlareCommand />} />
+        <Route path="/cme-command" element={<CmeCommand />} />
+        <Route path="/gst-command" element={<GstCommand />} />
       </Routes>
     </BrowserRouter>
   );

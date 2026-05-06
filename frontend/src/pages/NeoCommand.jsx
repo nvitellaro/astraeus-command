@@ -12,6 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+import StatCard from "../components/StatCard";
 import "../App.css";
 
 const API_BASE = "http://localhost:5001";
@@ -319,51 +321,52 @@ export default function NeoCommand() {
       </header>
 
       <section className="kpi-grid">
-        <div className="kpi-card">
-          <p>Total Tracked Objects</p>
-          <h2>{summary?.total_objects ?? kpis.total}</h2>
-        </div>
+        <StatCard
+          title="Total Tracked Objects"
+          value={summary?.total_objects ?? kpis.total}
+        />
 
-        <div className="kpi-card danger">
-          <p>Hazardous Objects</p>
-          <h2>{summary?.hazardous_objects ?? kpis.hazardous}</h2>
-        </div>
+        <StatCard
+          title="Hazardous Objects"
+          value={summary?.hazardous_objects ?? kpis.hazardous}
+          danger
+        />
 
-        <div className="kpi-card">
-          <p>Closest Approach</p>
-          <h2>
-            {summary?.closest_object
+        <StatCard
+          title="Closest Approach"
+          value={
+            summary?.closest_object
               ? formatDistance(summary.closest_object.miss_distance_miles)
               : kpis.closest
               ? formatDistance(kpis.closest.miss_distance_miles)
-              : "N/A"}
-          </h2>
-          <span>
-            {summary?.closest_object
+              : "N/A"
+          }
+          subtitle={
+            summary?.closest_object
               ? summary.closest_object.name
               : kpis.closest
               ? getObjectName(kpis.closest)
-              : "No object"}
-          </span>
-        </div>
+              : "No object"
+          }
+        />
 
-        <div className="kpi-card">
-          <p>Fastest Object</p>
-          <h2>
-            {summary?.fastest_object
+        <StatCard
+          title="Fastest Object"
+          value={
+            summary?.fastest_object
               ? formatVelocity(summary.fastest_object.relative_velocity_mph)
               : kpis.fastest
               ? formatVelocity(kpis.fastest.relative_velocity_mph)
-              : "N/A"}
-          </h2>
-          <span>
-            {summary?.fastest_object
+              : "N/A"
+          }
+          subtitle={
+            summary?.fastest_object
               ? summary.fastest_object.name
               : kpis.fastest
               ? getObjectName(kpis.fastest)
-              : "No object"}
-          </span>
-        </div>
+              : "No object"
+          }
+        />
       </section>
 
       <section className="control-panel">

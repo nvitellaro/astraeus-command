@@ -1,5 +1,6 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 
+import CommandLayout from "./components/CommandLayout";
 import CmeCommand from "./pages/CmeCommand";
 import GstCommand from "./pages/GstCommand";
 import NeoCommand from "./pages/NeoCommand";
@@ -55,15 +56,47 @@ function LandingPage() {
   );
 }
 
+function PageShell({ title, children }) {
+  return <CommandLayout title={title}>{children}</CommandLayout>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/neo-command" element={<NeoCommand />} />
-        <Route path="/solar-flares" element={<SolarFlareCommand />} />
-        <Route path="/cme-command" element={<CmeCommand />} />
-        <Route path="/gst-command" element={<GstCommand />} />
+        <Route
+          path="/neo-command"
+          element={
+            <PageShell title="NEO Command">
+              <NeoCommand />
+            </PageShell>
+          }
+        />
+        <Route
+          path="/solar-flares"
+          element={
+            <PageShell title="Solar Flare Command">
+              <SolarFlareCommand />
+            </PageShell>
+          }
+        />
+        <Route
+          path="/cme-command"
+          element={
+            <PageShell title="CME Command">
+              <CmeCommand />
+            </PageShell>
+          }
+        />
+        <Route
+          path="/gst-command"
+          element={
+            <PageShell title="GST Command">
+              <GstCommand />
+            </PageShell>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

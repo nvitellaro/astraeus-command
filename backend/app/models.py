@@ -69,3 +69,21 @@ class CmeEvent(Base):
     link = Column(String)
 
     fetched_at = Column(DateTime, index=True)
+
+
+class GstEvent(Base):
+    __tablename__ = "gst_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    gst_id = Column(String, unique=True, index=True)
+
+    start_time = Column(DateTime, index=True)
+
+    kp_index = Column(String)
+
+    linked_events = Column(String)
+
+    link = Column(String)
+
+    fetched_at = Column(DateTime, index=True)

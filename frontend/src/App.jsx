@@ -109,6 +109,9 @@ export default function App() {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [summary, setSummary] = useState(null);
 
+  const [solarSummary, setSolarSummary] = useState(null);
+  const [solarFlares, setSolarFlares] = useState([]);
+
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
   const [sortBy, setSortBy] = useState("time");
@@ -125,12 +128,19 @@ export default function App() {
         setLoading(true);
         setError("");
 
-        const [neoResponse, refreshResponse, summaryResponse] =
-          await Promise.all([
-            fetch(`${API_BASE}/api/neows/upcoming`),
-            fetch(`${API_BASE}/api/neows/last-refresh`),
-            fetch(`${API_BASE}/api/neows/summary`),
-          ]);
+        const [
+          neoResponse,
+          refreshResponse,
+          summaryResponse,
+          solarSummaryResponse,
+          solarRecentResponse,
+        ] = await Promise.all([
+          fetch(`${API_BASE}/api/neows/upcoming`),
+          fetch(`${API_BASE}/api/neows/last-refresh`),
+          fetch(`${API_BASE}/api/neows/summary`),
+          fetch(`${API_BASE}/api/solar-flares/summary`),
+          fetch(`${API_BASE}/api/solar-flares/recent`),
+        ]);
 
         if (!neoResponse.ok) {
           throw new Error(`API returned ${neoResponse.status}`);
@@ -148,8 +158,18 @@ export default function App() {
           const summaryData = await summaryResponse.json();
           setSummary(summaryData);
         }
+
+        if (solarSummaryResponse.ok) {
+          const solarSummaryData = await solarSummaryResponse.json();
+          setSolarSummary(solarSummaryData);
+        }
+
+        if (solarRecentResponse.ok) {
+          const solarRecentData = await solarRecentResponse.json();
+          setSolarFlares(solarRecentData.rows || []);
+        }
       } catch (err) {
-        setError(err.message || "Failed to load NeoWs data");
+        setError(err.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -301,7 +321,7 @@ export default function App() {
           <h1>Astraeus Command</h1>
           <p className="subtitle">
             Public-facing mission-control dashboard tracking near-Earth objects
-            from NASA NeoWs.
+            and solar activity from NASA data services.
           </p>
         </div>
 
@@ -428,7 +448,7 @@ export default function App() {
         </section>
       )}
 
-      {loading && <div className="message-box">Loading NeoWs telemetry...</div>}
+      {loading && <div className="message-box">Loading mission telemetry...</div>}
       {error && <div className="message-box error">Error: {error}</div>}
 
       {!loading && !error && (
@@ -700,6 +720,65 @@ export default function App() {
               </div>
             </section>
           </main>
+
+          <section className="tracking-table-wrap solar-panel">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">DONKI Solar Intelligence</p>
+                <h2>Recent Solar Flare Activity</h2>
+              </div>
+
+              <span>{solarSummary?.total_flares ?? 0} detected</span>
+            </div>
+
+            <div className="solar-summary-grid">
+              <div className="kpi-card">
+                <p>Total Solar Flares</p>
+                <h2>{solarSummary?.total_flares ?? 0}</h2>
+              </div>
+
+              <div className="kpi-card danger">
+                <p>Strongest Flare</p>
+                <h2>{solarSummary?.strongest_flare?.class_type ?? "N/A"}</h2>
+                <span>
+                  {solarSummary?.strongest_flare?.source_location ?? "Unknown"}
+                </span>
+              </div>
+
+              <div className="kpi-card">
+                <p>Class Breakdown</p>
+                <span>C-Class: {solarSummary?.class_counts?.C ?? 0}</span>
+                <span>M-Class: {solarSummary?.class_counts?.M ?? 0}</span>
+                <span>X-Class: {solarSummary?.class_counts?.X ?? 0}</span>
+              </div>
+            </div>
+
+            <div className="tracking-table">
+              <div className="table-row table-head">
+                <span>Flare ID</span>
+                <span>Class</span>
+                <span>Begin Time</span>
+                <span>Region</span>
+                <span>Source</span>
+              </div>
+
+              {solarFlares.map((flare) => (
+                <a
+                  key={flare.flr_id}
+                  href={flare.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="table-row data-row"
+                >
+                  <span>{flare.flr_id}</span>
+                  <span>{flare.class_type}</span>
+                  <span>{formatDateTime(flare.begin_time)}</span>
+                  <span>{flare.active_region_num || "N/A"}</span>
+                  <span>{flare.source_location || "Unknown"}</span>
+                </a>
+              ))}
+            </div>
+          </section>
         </>
       )}
     </div>

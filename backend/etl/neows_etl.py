@@ -47,6 +47,20 @@ def upsert_neo_event(db, neo, approach):
         "miles_per_hour"
     )
 
+    estimated_diameter_min_ft = (
+        neo.get("estimated_diameter", {})
+        .get("feet", {})
+        .get("estimated_diameter_min")
+    )
+
+    estimated_diameter_max_ft = (
+        neo.get("estimated_diameter", {})
+        .get("feet", {})
+        .get("estimated_diameter_max")
+    )
+
+    fetched_at = datetime.utcnow()
+
     existing = (
         db.query(NeoEvent)
         .filter(
@@ -59,51 +73,27 @@ def upsert_neo_event(db, neo, approach):
     if existing:
         existing.name = neo.get("name")
         existing.nasa_jpl_url = neo.get("nasa_jpl_url")
-        existing.absolute_magnitude_h = neo.get("absolute_magnitude_h")
-        existing.estimated_diameter_min_miles = (
-            neo.get("estimated_diameter", {})
-            .get("miles", {})
-            .get("estimated_diameter_min")
-        )
-        existing.estimated_diameter_max_miles = (
-            neo.get("estimated_diameter", {})
-            .get("miles", {})
-            .get("estimated_diameter_max")
-        )
-        existing.is_potentially_hazardous_asteroid = neo.get(
-            "is_potentially_hazardous_asteroid"
-        )
+        existing.is_hazardous = neo.get("is_potentially_hazardous_asteroid")
         existing.close_approach_datetime = close_approach_datetime
         existing.miss_distance_miles = miss_distance_miles
         existing.relative_velocity_mph = relative_velocity_mph
-        existing.orbiting_body = approach.get("orbiting_body")
-        existing.raw_data = neo
+        existing.estimated_diameter_min_ft = estimated_diameter_min_ft
+        existing.estimated_diameter_max_ft = estimated_diameter_max_ft
+        existing.fetched_at = fetched_at
         return existing
 
     event = NeoEvent(
         neo_reference_id=neo.get("neo_reference_id"),
         name=neo.get("name"),
         nasa_jpl_url=neo.get("nasa_jpl_url"),
-        absolute_magnitude_h=neo.get("absolute_magnitude_h"),
-        estimated_diameter_min_miles=(
-            neo.get("estimated_diameter", {})
-            .get("miles", {})
-            .get("estimated_diameter_min")
-        ),
-        estimated_diameter_max_miles=(
-            neo.get("estimated_diameter", {})
-            .get("miles", {})
-            .get("estimated_diameter_max")
-        ),
-        is_potentially_hazardous_asteroid=neo.get(
-            "is_potentially_hazardous_asteroid"
-        ),
+        is_hazardous=neo.get("is_potentially_hazardous_asteroid"),
         close_approach_date=close_approach_date,
         close_approach_datetime=close_approach_datetime,
         miss_distance_miles=miss_distance_miles,
         relative_velocity_mph=relative_velocity_mph,
-        orbiting_body=approach.get("orbiting_body"),
-        raw_data=neo,
+        estimated_diameter_min_ft=estimated_diameter_min_ft,
+        estimated_diameter_max_ft=estimated_diameter_max_ft,
+        fetched_at=fetched_at,
     )
 
     db.add(event)

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import asc
+from sqlalchemy import asc, func
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -37,4 +37,13 @@ def get_upcoming_neos(db: Session = Depends(get_db)):
             }
             for row in rows
         ]
+    }
+
+
+@router.get("/last-refresh")
+def get_last_refresh(db: Session = Depends(get_db)):
+    latest = db.query(func.max(NeoEvent.fetched_at)).scalar()
+
+    return {
+        "last_refresh": latest.isoformat() if latest else None
     }

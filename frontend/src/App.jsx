@@ -32,6 +32,13 @@ function formatVelocity(value) {
   return `${formatNumber(Number(value).toFixed(0))} mph`;
 }
 
+function formatDateTime(value) {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 function getObjectName(neo) {
   return neo?.name || neo?.neo_reference_id || "Unknown Object";
 }
@@ -40,7 +47,10 @@ function getHazardValue(neo) {
   return (
     neo?.is_potentially_hazardous_asteroid === true ||
     neo?.is_potentially_hazardous_asteroid === "true" ||
-    neo?.is_potentially_hazardous_asteroid === 1
+    neo?.is_potentially_hazardous_asteroid === 1 ||
+    neo?.is_hazardous === true ||
+    neo?.is_hazardous === "true" ||
+    neo?.is_hazardous === 1
   );
 }
 
@@ -96,6 +106,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [lastRefresh, setLastRefresh] = useState(null);
+
   const [search, setSearch] = useState("");
   const [hazardousOnly, setHazardousOnly] = useState(false);
   const [sortBy, setSortBy] = useState("time");
@@ -107,17 +119,27 @@ export default function App() {
   const [hoveredVelocityBand, setHoveredVelocityBand] = useState(null);
 
   useEffect(() => {
-    async function fetchNeoEvents() {
+    async function fetchDashboardData() {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE}/api/neows/upcoming`);
+        setError("");
 
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
+        const [neoResponse, refreshResponse] = await Promise.all([
+          fetch(`${API_BASE}/api/neows/upcoming`),
+          fetch(`${API_BASE}/api/neows/last-refresh`),
+        ]);
+
+        if (!neoResponse.ok) {
+          throw new Error(`API returned ${neoResponse.status}`);
         }
 
-        const data = await response.json();
-        setNeoEvents(data.rows || []);
+        const neoData = await neoResponse.json();
+        setNeoEvents(neoData.rows || []);
+
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          setLastRefresh(refreshData.last_refresh || null);
+        }
       } catch (err) {
         setError(err.message || "Failed to load NeoWs data");
       } finally {
@@ -125,7 +147,7 @@ export default function App() {
       }
     }
 
-    fetchNeoEvents();
+    fetchDashboardData();
   }, []);
 
   const filteredEvents = useMemo(() => {
@@ -147,7 +169,12 @@ export default function App() {
         !selectedVelocityBand ||
         getVelocityBand(neo.relative_velocity_mph) === selectedVelocityBand;
 
-      return matchesSearch && matchesHazardous && matchesDistance && matchesVelocity;
+      return (
+        matchesSearch &&
+        matchesHazardous &&
+        matchesDistance &&
+        matchesVelocity
+      );
     });
 
     return filtered.sort((a, b) => {
@@ -215,13 +242,27 @@ export default function App() {
         neoEvents,
         "miss_distance_miles",
         getDistanceBand,
-        ["< 1M mi", "1M–5M mi", "5M–10M mi", "10M–20M mi", "20M+ mi", "Unknown"]
+        [
+          "< 1M mi",
+          "1M–5M mi",
+          "5M–10M mi",
+          "10M–20M mi",
+          "20M+ mi",
+          "Unknown",
+        ]
       ),
       velocityData: buildBandData(
         neoEvents,
         "relative_velocity_mph",
         getVelocityBand,
-        ["< 10K mph", "10K–25K mph", "25K–50K mph", "50K–75K mph", "75K+ mph", "Unknown"]
+        [
+          "< 10K mph",
+          "10K–25K mph",
+          "25K–50K mph",
+          "50K–75K mph",
+          "75K+ mph",
+          "Unknown",
+        ]
       ),
     };
   }, [neoEvents, kpis]);
@@ -256,9 +297,16 @@ export default function App() {
           </p>
         </div>
 
-        <div className="status-pill">
-          <span className="pulse-dot"></span>
-          LIVE DATA LINK
+        <div className="hero-right">
+          <div className="status-pill">
+            <span className="pulse-dot"></span>
+            LIVE DATA LINK
+          </div>
+
+          <div className="etl-timestamp">
+            <span className="etl-label">LAST ETL REFRESH</span>
+            <span className="etl-value">{formatDateTime(lastRefresh)}</span>
+          </div>
         </div>
       </header>
 
@@ -275,13 +323,21 @@ export default function App() {
 
         <div className="kpi-card">
           <p>Closest Approach</p>
-          <h2>{kpis.closest ? formatDistance(kpis.closest.miss_distance_miles) : "N/A"}</h2>
+          <h2>
+            {kpis.closest
+              ? formatDistance(kpis.closest.miss_distance_miles)
+              : "N/A"}
+          </h2>
           <span>{kpis.closest ? getObjectName(kpis.closest) : "No object"}</span>
         </div>
 
         <div className="kpi-card">
           <p>Fastest Object</p>
-          <h2>{kpis.fastest ? formatVelocity(kpis.fastest.relative_velocity_mph) : "N/A"}</h2>
+          <h2>
+            {kpis.fastest
+              ? formatVelocity(kpis.fastest.relative_velocity_mph)
+              : "N/A"}
+          </h2>
           <span>{kpis.fastest ? getObjectName(kpis.fastest) : "No object"}</span>
         </div>
       </section>
@@ -320,7 +376,9 @@ export default function App() {
         <section className="filter-strip">
           <span className="filter-title">Active Intelligence Filters</span>
 
-          {search && <button onClick={() => setSearch("")}>Search: {search} ×</button>}
+          {search && (
+            <button onClick={() => setSearch("")}>Search: {search} ×</button>
+          )}
 
           {hazardousOnly && (
             <button onClick={() => setHazardousOnly(false)}>
@@ -379,7 +437,9 @@ export default function App() {
                       {chartData.hazardData.map((entry) => (
                         <Cell
                           key={entry.name}
-                          fill={entry.name === "Hazardous" ? "#fb7185" : "#22c55e"}
+                          fill={
+                            entry.name === "Hazardous" ? "#fb7185" : "#22c55e"
+                          }
                         />
                       ))}
                     </Pie>
@@ -404,7 +464,9 @@ export default function App() {
                 <BarChart
                   data={chartData.distanceData}
                   onMouseMove={(state) => {
-                    if (state?.activeLabel) setHoveredDistanceBand(state.activeLabel);
+                    if (state?.activeLabel) {
+                      setHoveredDistanceBand(state.activeLabel);
+                    }
                   }}
                   onMouseLeave={() => setHoveredDistanceBand(null)}
                   onClick={(state) => {
@@ -414,7 +476,10 @@ export default function App() {
                     );
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(148,163,184,0.18)"
+                  />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
                   <YAxis stroke="#94a3b8" allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
@@ -445,7 +510,9 @@ export default function App() {
                 <BarChart
                   data={chartData.velocityData}
                   onMouseMove={(state) => {
-                    if (state?.activeLabel) setHoveredVelocityBand(state.activeLabel);
+                    if (state?.activeLabel) {
+                      setHoveredVelocityBand(state.activeLabel);
+                    }
                   }}
                   onMouseLeave={() => setHoveredVelocityBand(null)}
                   onClick={(state) => {
@@ -455,7 +522,10 @@ export default function App() {
                     );
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(148,163,184,0.18)"
+                  />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
                   <YAxis stroke="#94a3b8" allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
@@ -516,7 +586,9 @@ export default function App() {
 
                 <div>
                   <p>Approach DateTime</p>
-                  <h3>{selectedAsteroid.close_approach_datetime || "N/A"}</h3>
+                  <h3>
+                    {formatDateTime(selectedAsteroid.close_approach_datetime)}
+                  </h3>
                 </div>
 
                 <div>
@@ -526,7 +598,9 @@ export default function App() {
 
                 <div>
                   <p>Relative Velocity</p>
-                  <h3>{formatVelocity(selectedAsteroid.relative_velocity_mph)}</h3>
+                  <h3>
+                    {formatVelocity(selectedAsteroid.relative_velocity_mph)}
+                  </h3>
                 </div>
 
                 <div>
@@ -575,9 +649,11 @@ export default function App() {
 
                   const isChartHighlighted =
                     (hoveredDistanceBand &&
-                      getDistanceBand(neo.miss_distance_miles) === hoveredDistanceBand) ||
+                      getDistanceBand(neo.miss_distance_miles) ===
+                        hoveredDistanceBand) ||
                     (hoveredVelocityBand &&
-                      getVelocityBand(neo.relative_velocity_mph) === hoveredVelocityBand);
+                      getVelocityBand(neo.relative_velocity_mph) ===
+                        hoveredVelocityBand);
 
                   return (
                     <button
